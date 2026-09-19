@@ -14,9 +14,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         client_request_id = request.headers.get("X-Request-ID")
         request_id = sanitize_request_id(client_request_id)
 
-        # Store in contextvar for structlog and downstream services
         set_request_id(request_id)
-        # Store in request state for endpoint handlers
         request.state.request_id = request_id
 
         response = await call_next(request)

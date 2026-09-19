@@ -62,7 +62,6 @@ class RateLimiter:
         redis_key = f"ratelimit:{key_identifier}"
 
         try:
-            # 1. Clean old entries and count current requests in sliding window
             pipe = self.redis.pipeline(transaction=True)
             pipe.zremrangebyscore(redis_key, "-inf", clear_before)
             pipe.zcard(redis_key)
@@ -73,7 +72,6 @@ class RateLimiter:
             oldest_entries = results[2]
 
             if current_requests < limit:
-                # Member unique string: timestamp:random_salt
                 member = f"{now}:{random.randint(10000, 99999)}"
                 add_pipe = self.redis.pipeline(transaction=True)
                 add_pipe.zadd(redis_key, {member: now})
@@ -90,7 +88,6 @@ class RateLimiter:
                     degraded=False,
                 )
             else:
-                # Estimate reset epoch based on oldest entry in window
                 reset_epoch = int(now + window_seconds)
                 if oldest_entries and len(oldest_entries) > 0:
                     oldest_score = float(oldest_entries[0][1])
@@ -112,7 +109,6 @@ class RateLimiter:
                 error=str(exc),
             )
 
-            # Deliberate failure policy handling
             if self.settings.rate_limit_redis_failure_policy == "fail_open":
                 logger.warning(
                     "Redis unavailable; allowing request under fail_open policy",

@@ -74,7 +74,6 @@ class WebhookService:
             "X-Request-ID": request_id,
         }
 
-        # Track delivery record in DB
         delivery_record: WebhookDelivery | None = None
         if db_session is not None:
             delivery_record = WebhookDelivery(
@@ -119,7 +118,6 @@ class WebhookService:
                     )
                     resp.raise_for_status()
 
-            # Successfully delivered
             logger.info(
                 "Webhook delivered successfully",
                 webhook_url=webhook_url,

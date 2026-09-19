@@ -365,7 +365,7 @@ The service is packaged as a standard container ready for deployment on any cont
 1. **Why not expose provider SDKs directly?**
    Exposing raw provider response formats leaks upstream vendor details to clients. When OpenAI changes a parameter name or Anthropic structures tool calls differently, every downstream application breaks. Normalizing requests and responses shields client applications completely.
 2. **Why SHA-256 for API keys instead of bcrypt?**
-   API gateways must authenticate every single incoming HTTP request with sub-millisecond latency. High-cost password hashing algorithms like bcrypt (cost factor $\ge 12$) take 100–300ms per check, making them unsuitable for high-throughput API gateways. High-entropy random keys (e.g. 256 bits of CSPRNG randomness) have no risk of dictionary attacks, making SHA-256 both mathematically secure and fast.
+   API gateways must authenticate every single incoming HTTP request with sub-millisecond latency. High-cost password hashing algorithms like bcrypt (cost factor $\ge 12$) take 100-300ms per check, making them unsuitable for high-throughput API gateways. High-entropy random keys (e.g. 256 bits of CSPRNG randomness) have no risk of dictionary attacks, making SHA-256 both mathematically secure and fast.
 3. **Why Sliding Window over Fixed Window Rate Limiting?**
    Fixed window counters suffer from the "boundary burst" problem (clients can send 2x their quota at the boundary of two windows). A sliding window via Redis sorted sets guarantees strict rate enforcement across any 60-second slice of time.
 

@@ -49,7 +49,6 @@ class GenerationService:
         try:
             response = await provider_adapter.generate(request, request_id)
 
-            # Persist successful audit record
             audit_record = GenerationRequest(
                 id=request_id,
                 client_id=client_api_key.id,
@@ -64,7 +63,6 @@ class GenerationService:
             self.db.add(audit_record)
             await self.db.commit()
 
-            # If webhook_url is specified, deliver signed completion event
             if request.webhook_url:
                 await self.webhook_service.dispatch(
                     webhook_url=str(request.webhook_url),
@@ -85,7 +83,6 @@ class GenerationService:
                 error_code = exc.code
                 error_message = exc.message
 
-            # Persist failed audit record
             audit_record = GenerationRequest(
                 id=request_id,
                 client_id=client_api_key.id,
@@ -99,7 +96,6 @@ class GenerationService:
             self.db.add(audit_record)
             await self.db.commit()
 
-            # If webhook_url is specified, deliver signed failure event
             if request.webhook_url:
                 await self.webhook_service.dispatch(
                     webhook_url=str(request.webhook_url),

@@ -47,7 +47,6 @@ async def generate_chat_completion(
 ) -> JSONResponse:
     request_id = get_request_id()
 
-    # 1. Enforce API-key sliding-window rate limit
     limit_result = await rate_limiter.check_rate_limit(
         key_identifier=client.key_hash,
         limit_override=client.rate_limit_per_minute,
@@ -63,7 +62,6 @@ async def generate_chat_completion(
             retry_after=retry_after,
         )
 
-    # 2. Execute generation via orchestration service
     gen_service = GenerationService(db_session=db)
     result = await gen_service.execute(
         request=request_body,
@@ -71,7 +69,6 @@ async def generate_chat_completion(
         request_id=request_id,
     )
 
-    # 3. Return normalized response along with standard rate-limiting headers
     return JSONResponse(
         status_code=200,
         content=result.model_dump(),

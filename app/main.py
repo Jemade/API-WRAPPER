@@ -63,10 +63,8 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # 1. Register global exception handlers
     register_error_handlers(app)
 
-    # 2. Add middleware (executed in reverse order of addition)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
 
@@ -85,7 +83,6 @@ def create_application() -> FastAPI:
         ],
     )
 
-    # 3. Mount routers
     app.include_router(system_router)
     app.include_router(api_v1_router)
 

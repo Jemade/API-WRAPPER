@@ -44,7 +44,6 @@ async def readiness_check(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ) -> ReadyResponse:
-    # 1. Check PostgreSQL connectivity
     db_health = ComponentHealth(status="healthy")
     try:
         await db.execute(text("SELECT 1"))
@@ -52,7 +51,6 @@ async def readiness_check(
         db_health.status = "unhealthy"
         db_health.message = f"Database ping failed: {str(exc)}"
 
-    # 2. Check Redis connectivity
     redis_health = ComponentHealth(status="healthy")
     try:
         await redis.ping()
@@ -82,7 +80,6 @@ async def service_metrics(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ) -> MetricsResponse:
-    # Query aggregated stats from generation_requests
     total_reqs = 0
     success_reqs = 0
     failed_reqs = 0
@@ -105,10 +102,8 @@ async def service_metrics(
             failed_reqs = int(row["failed"])
             avg_latency = round(float(row["avg_latency"]), 2)
     except Exception:
-        # If DB query fails or table is not ready, default to 0
         pass
 
-    # Count active rate limit keys in Redis
     active_rate_limits = 0
     try:
         keys = await redis.keys("ratelimit:*")

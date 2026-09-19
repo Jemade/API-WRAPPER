@@ -53,7 +53,6 @@ async def get_current_client(
             "or 'Authorization: Bearer <key>'."
         )
 
-    # Compute deterministic SHA-256 hash for lookup
     key_hash = hash_api_key(raw_key)
 
     stmt = select(ApiKey).where(ApiKey.key_hash == key_hash)
