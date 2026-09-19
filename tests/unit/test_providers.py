@@ -12,6 +12,7 @@ from app.core.exceptions import (
 )
 from app.providers.anthropic import AnthropicProvider
 from app.providers.factory import ProviderFactory
+from app.providers.gemini import GeminiProvider
 from app.providers.openai import OpenAIProvider
 from app.schemas.generate import ChatMessage, ChatRequest
 
@@ -30,6 +31,12 @@ def test_provider_factory_routing() -> None:
     anthropic_prov = factory.resolve("claude-3-5-sonnet-20241022")
     assert isinstance(anthropic_prov, AnthropicProvider)
     assert anthropic_prov.provider_name == "anthropic"
+
+    gemini_prov = factory.resolve("gemini-3.6-flash")
+    assert gemini_prov.provider_name == "gemini"
+
+    gemini_short = factory.resolve("gemini")
+    assert gemini_short.provider_name == "gemini"
 
     with pytest.raises(InvalidRequestError) as exc_info:
         factory.resolve("unsupported-llm-v1")
@@ -160,3 +167,78 @@ async def test_provider_401_auth_error() -> None:
     with pytest.raises(ProviderConfigurationError) as exc_info:
         await provider.generate(chat_req, request_id="req_unauth")
     assert "rejected credentials" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_gemini_provider_success() -> None:
+    """GeminiProvider maps system instruction and normalizes candidate parts."""
+    mock_response_payload = {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [{"text": "Hello from Gemini!"}],
+                    "role": "model",
+                },
+                "finishReason": "STOP",
+                "index": 0,
+            }
+        ],
+        "usageMetadata": {
+            "promptTokenCount": 8,
+            "candidatesTokenCount": 6,
+            "totalTokenCount": 14,
+        },
+    }
+
+    async def mock_handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["x-goog-api-key"] == "test-gemini-key"
+        assert "models/gemini-3.6-flash:generateContent" in str(request.url)
+        body = json.loads(request.content.decode("utf-8"))
+        assert body["systemInstruction"]["parts"][0]["text"] == "Be concise."
+        assert body["contents"][0]["role"] == "user"
+        assert body["contents"][0]["parts"][0]["text"] == "Hi Gemini"
+        return httpx.Response(200, json=mock_response_payload)
+
+    transport = httpx.MockTransport(mock_handler)
+    client = httpx.AsyncClient(transport=transport)
+
+    from app.core.config import Settings
+
+    settings = Settings(gemini_api_key="test-gemini-key")
+    provider = GeminiProvider(http_client=client, settings=settings)
+
+    chat_req = ChatRequest(
+        model="gemini-3.6-flash",
+        messages=[
+            ChatMessage(role="system", content="Be concise."),
+            ChatMessage(role="user", content="Hi Gemini"),
+        ],
+    )
+
+    response = await provider.generate(chat_req, request_id="req_gemini_test")
+    assert response.request_id == "req_gemini_test"
+    assert response.provider == "gemini"
+    assert response.model == "gemini-3.6-flash"
+    assert response.content == "Hello from Gemini!"
+    assert response.input_tokens == 8
+    assert response.output_tokens == 6
+    assert response.total_tokens == 14
+    assert response.finish_reason == "stop"
+
+
+@pytest.mark.asyncio
+async def test_gemini_provider_unconfigured_key() -> None:
+    """GeminiProvider raises ProviderConfigurationError if API key is missing."""
+    from app.core.config import Settings
+
+    settings = Settings(gemini_api_key=None)
+    provider = GeminiProvider(settings=settings)
+
+    chat_req = ChatRequest(
+        model="gemini-3.6-flash",
+        messages=[ChatMessage(role="user", content="Hi")],
+    )
+
+    with pytest.raises(ProviderConfigurationError) as exc_info:
+        await provider.generate(chat_req, request_id="req_missing_key")
+    assert "Gemini API key is not configured" in str(exc_info.value)

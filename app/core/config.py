@@ -37,8 +37,8 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/gateway",
-        description="SQLAlchemy async connection string",
+        default="sqlite+aiosqlite:///./gateway.db",
+        description="SQLAlchemy async connection string (PostgreSQL or SQLite fallback)",
     )
 
     # Redis
@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     )
 
     # Providers
+    gemini_api_key: str | None = None
+    gemini_api_base: str = "https://generativelanguage.googleapis.com/v1beta"
+
     openai_api_key: str | None = None
     openai_api_base: str = "https://api.openai.com/v1"
 

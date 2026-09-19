@@ -25,8 +25,13 @@ class ChatRequest(BaseModel):
     model: str = Field(
         ...,
         min_length=1,
-        description="Target model identifier (e.g. 'gpt-4o', 'claude-3-5-sonnet-20241022').",
-        examples=["gpt-4o", "claude-3-5-sonnet-20241022"],
+        description="Target model identifier (e.g. 'gemini-3.6-flash', 'gpt-4o').",
+        examples=[
+            "gemini-3.6-flash",
+            "gemini-flash-latest",
+            "gpt-4o",
+            "claude-3-5-sonnet-20241022",
+        ],
     )
     messages: list[ChatMessage] = Field(
         ...,
