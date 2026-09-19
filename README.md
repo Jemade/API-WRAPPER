@@ -84,7 +84,7 @@ flowchart TD
 ### 1. Synchronous Generation Request
 
 ```bash
-curl -i -X POST http://localhost:8000/v1/generate \
+curl -i -X POST http://localhost:8080/v1/generate \
   -H "X-API-Key: gw_live_your_api_key_here" \
   -H "X-Request-ID: req_custom_trace_123" \
   -H "Content-Type: application/json" \
@@ -211,6 +211,7 @@ X-Request-ID: req_custom_trace_123
 ```python
 import hmac, hashlib
 
+
 def verify_signature(payload_bytes: bytes, secret: str, signature_header: str) -> bool:
     raw_sig = signature_header.replace("v1=", "")
     expected = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
@@ -252,7 +253,7 @@ python scripts/create_api_key.py --name "Development Key" --rate-limit 60
 
 ### 5. Start Application
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 ---
@@ -335,9 +336,9 @@ The service is packaged as a standard container ready for deployment on any cont
 
 ## API Documentation
 
-- **Interactive Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc UI**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-- **Raw OpenAPI Schema**: [http://localhost:8000/openapi.json](http://localhost:8000/openapi.json)
+- **Interactive Swagger UI**: [http://localhost:8080/docs](http://localhost:8080/docs)
+- **ReDoc UI**: [http://localhost:8080/redoc](http://localhost:8080/redoc)
+- **Raw OpenAPI Schema**: [http://localhost:8080/openapi.json](http://localhost:8080/openapi.json)
 
 ---
 

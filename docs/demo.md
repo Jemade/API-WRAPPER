@@ -14,13 +14,13 @@ docker compose up -d
 
 # Option B: Local development mode
 source .venv/bin/activate
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 Verify service liveness and readiness:
 ```bash
-curl -s http://localhost:8000/health | jq .
-curl -s http://localhost:8000/ready | jq .
+curl -s http://localhost:8080/health | jq .
+curl -s http://localhost:8080/ready | jq .
 ```
 
 ---
@@ -43,12 +43,12 @@ export GATEWAY_KEY="<paste-your-raw-key-here>"
 ## Step 3: Open OpenAPI Documentation
 
 Open your browser to:
-[http://localhost:8000/docs](http://localhost:8000/docs)
+[http://localhost:8080/docs](http://localhost:8080/docs)
 
 Showcase:
 - Tags: `Generation` and `System`
 - Response schemas: `LLMResponse`, `ErrorResponse`, `ReadyResponse`
-- Interactive OpenAPI schema at `http://localhost:8000/openapi.json`
+- Interactive OpenAPI schema at `http://localhost:8080/openapi.json`
 
 ---
 
@@ -57,7 +57,7 @@ Showcase:
 Send a request via `curl`:
 
 ```bash
-curl -i -X POST http://localhost:8000/v1/generate \
+curl -i -X POST http://localhost:8080/v1/generate \
   -H "X-API-Key: $GATEWAY_KEY" \
   -H "X-Request-ID: demo-trace-001" \
   -H "Content-Type: application/json" \
@@ -98,7 +98,7 @@ Send 3 rapid requests to exhaust the quota:
 
 ```bash
 for i in {1..3}; do
-  curl -s -o /dev/null -w "Request $i: HTTP %{http_code}\n" -X POST http://localhost:8000/v1/generate \
+  curl -s -o /dev/null -w "Request $i: HTTP %{http_code}\n" -X POST http://localhost:8080/v1/generate \
     -H "X-API-Key: $GATEWAY_KEY" \
     -H "Content-Type: application/json" \
     -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "ping"}]}';
@@ -130,7 +130,7 @@ X-RateLimit-Reset: 1789809600
 Send an invalid request with an unsupported temperature ($2.5$) and empty messages:
 
 ```bash
-curl -i -X POST http://localhost:8000/v1/generate \
+curl -i -X POST http://localhost:8080/v1/generate \
   -H "X-API-Key: $GATEWAY_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-4o", "messages": [], "temperature": 2.5}'
@@ -160,7 +160,7 @@ Returns `422 Unprocessable Entity`:
 Send a request with `webhook_url`:
 
 ```bash
-curl -i -X POST http://localhost:8000/v1/generate \
+curl -i -X POST http://localhost:8080/v1/generate \
   -H "X-API-Key: $GATEWAY_KEY" \
   -H "Content-Type: application/json" \
   -d '{

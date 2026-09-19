@@ -11,7 +11,7 @@ services:
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: gateway
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -28,7 +28,7 @@ services:
     container_name: gateway-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -52,9 +52,10 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${PORT:-8080}:${PORT:-8080}"
     environment:
       APP_ENV: production
+      PORT: ${PORT:-8080}
       DATABASE_URL: postgresql+asyncpg://postgres:postgrespassword@postgres:5432/gateway
       REDIS_URL: redis://redis:6379/0
       RATE_LIMIT_PER_MINUTE: "60"
@@ -64,7 +65,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       LOG_LEVEL: INFO
     command: >
-      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $${PORT:-8080} --workers 2"
 
 volumes:
   postgres_data:

@@ -3,8 +3,8 @@
 
 import hashlib
 import hmac
-import json
 import sys
+
 import httpx
 
 
@@ -90,7 +90,7 @@ class LLMGatewayClient:
 
 
 def main() -> None:
-    gateway_url = "http://localhost:8000"
+    gateway_url = "http://localhost:8080"
     api_key = "gw_live_your_api_key_here"
 
     print("=" * 60)
@@ -106,7 +106,7 @@ def main() -> None:
             print(f"Gateway Health: {health['status']} (v{health['version']})")
     except Exception as exc:
         print(f"Could not reach gateway at {gateway_url}: {exc}")
-        print("Start the gateway with: uvicorn app.main:app --port 8000")
+        print("Start the gateway with: uvicorn app.main:app --port 8080")
         sys.exit(1)
 
     # 2. Synchronous chat completion
