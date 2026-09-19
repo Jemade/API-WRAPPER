@@ -1,5 +1,6 @@
-<<<<<<< HEAD
 # Production LLM API Gateway
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Jemade/API-WRAPPER)
 
 A production-oriented API gateway and reverse proxy built in Python with FastAPI, PostgreSQL, and Redis that controls, observes, and standardizes traffic between client applications and upstream Large Language Model providers (OpenAI and Anthropic). It provides API-key authentication with hashed credentials, distributed sliding-window rate limiting, exponential backoff retries for transient upstream failures, normalized response structures, HMAC-SHA256-signed webhook delivery, and structured JSON logging with correlation IDs.
 
@@ -229,8 +230,8 @@ def verify_signature(payload_bytes: bytes, secret: str, signature_header: str) -
 
 ### 2. Setup
 ```bash
-git clone https://github.com/jayden-mapasure/production-llm-api-gateway.git
-cd production-llm-api-gateway
+git clone https://github.com/Jemade/API-WRAPPER.git
+cd API-WRAPPER
 
 python3 -m venv .venv
 source .venv/bin/activate
@@ -323,9 +324,29 @@ docker compose exec api alembic upgrade head
 
 ## Deployment
 
-The service is packaged as a standard container ready for deployment on any container platform (Fly.io, Railway, Render, AWS ECS, GCP Cloud Run).
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Jemade/API-WRAPPER)
 
-### Deployment Guidelines:
+The repository includes a ready-to-use Render Blueprint (`render.yaml`) that provisions the API Gateway web service, managed PostgreSQL database, and Redis instance in a single click.
+
+### 1-Click Deployment on Render
+
+1. Click the **Deploy to Render** button above or open:
+   `https://render.com/deploy?repo=https://github.com/Jemade/API-WRAPPER`
+2. Connect your GitHub account if prompted.
+3. In the Blueprint configuration screen:
+   - Provide your `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY`.
+   - The PostgreSQL database (`gateway-postgres`) and Redis service (`gateway-redis`) are provisioned automatically.
+   - `WEBHOOK_SECRET` is automatically generated.
+4. Click **Apply**. Render builds the Docker container, executes database migrations (`alembic upgrade head`), and starts the gateway service.
+5. Once deployed, open the **Shell** tab in the Render dashboard and generate a client API key:
+   ```bash
+   python scripts/create_api_key.py --name "Production Client" --rate-limit 60
+   ```
+
+### Other Platforms
+The service is packaged as a standard container ready for deployment on any container platform (Fly.io, Railway, AWS ECS, GCP Cloud Run).
+
+#### Deployment Guidelines:
 1. **Database & Cache**: Provision managed PostgreSQL and Redis instances.
 2. **Environment Variables**: Set `DATABASE_URL`, `REDIS_URL`, `WEBHOOK_SECRET`, and provider API keys in your platform dashboard.
 3. **Migration on Release**: Run `alembic upgrade head` as a release phase command or startup step.
@@ -385,6 +406,3 @@ The service is packaged as a standard container ready for deployment on any cont
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-=======
-"# API-WRAPPER" 
->>>>>>> c79f31415342b3ec68d85b927578f73c7e1d90e3

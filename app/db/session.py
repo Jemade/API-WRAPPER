@@ -25,7 +25,7 @@ def get_engine() -> AsyncEngine:
             connect_args["check_same_thread"] = False
 
         _engine = create_async_engine(
-            settings.database_url,
+            settings.async_database_url,
             echo=settings.debug,
             connect_args=connect_args,
             pool_pre_ping=True,
