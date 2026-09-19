@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Production LLM API Gateway
 
 A production-oriented API gateway and reverse proxy built in Python with FastAPI, PostgreSQL, and Redis that controls, observes, and standardizes traffic between client applications and upstream Large Language Model providers (OpenAI and Anthropic). It provides API-key authentication with hashed credentials, distributed sliding-window rate limiting, exponential backoff retries for transient upstream failures, normalized response structures, HMAC-SHA256-signed webhook delivery, and structured JSON logging with correlation IDs.
@@ -384,3 +385,6 @@ The service is packaged as a standard container ready for deployment on any cont
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+=======
+"# API-WRAPPER" 
+>>>>>>> c79f31415342b3ec68d85b927578f73c7e1d90e3
