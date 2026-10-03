@@ -59,7 +59,7 @@ flowchart TD
 - **Distributed Rate Limiting**: Atomic Redis sliding-window counter per API key with configurable quotas and documented failure policies (`fail_open` vs `fail_closed`).
 - **Resilient Retries**: `tenacity`-powered exponential backoff for transient failures (timeouts, connection resets, 500, 502, 503, 504) while immediately failing on client errors (400, 422).
 - **Correlation ID Tracing**: Request IDs generated or accepted from `X-Request-ID` headers, injected into `structlog` contextvars, and traced across DB logs and responses.
-- **HMAC-Signed Webhooks**: Background delivery of generation results with HMAC-SHA256 signatures (`X-Webhook-Signature`) and delivery retry tracking in PostgreSQL.
+- **HMAC-Signed Webhooks**: Optional delivery of generation results with HMAC-SHA256 signatures (`X-Webhook-Signature`) and delivery retry tracking in PostgreSQL.
 - **Audit Logging**: Full audit trail of every request, token count, latency, and status in PostgreSQL.
 - **Production Observability**: Health checks (`/health`, `/ready`) and operational metrics (`/metrics`).
 - **OpenAPI 3.1 Documentation**: Clean interactive Swagger docs (`/docs`) and schema (`/openapi.json`).
@@ -159,7 +159,6 @@ All errors return a standardized JSON envelope with a machine-readable `code`, h
 | `UPSTREAM_TIMEOUT` | 504 | Upstream provider timed out after max retries |
 | `UPSTREAM_UNAVAILABLE` | 503 | Upstream provider returned 5xx or connection failed |
 | `PROVIDER_CONFIGURATION_ERROR`| 500 | Gateway missing required upstream API credentials |
-| `WEBHOOK_DELIVERY_FAILED` | 500 | Webhook callback failed after all retries |
 | `INTERNAL_ERROR` | 500 | Unhandled internal exception |
 
 ---
@@ -382,7 +381,7 @@ The service is packaged as a standard container ready for deployment on any cont
 
 - **Streaming (SSE)**: Currently optimized for atomic request/response completions. Streaming SSE token responses are planned for a future release.
 - **Provider Count**: Currently includes OpenAI and Anthropic adapters. Additional providers (Google Gemini, Mistral, Ollama) can be added by implementing the `LLMProvider` interface.
-- **Background Worker**: Webhook deliveries are currently executed via background async tasks. For high-volume enterprise deployments, offloading deliveries to Celery, ARQ, or BullMQ is recommended.
+- **Background Worker**: Webhook deliveries currently run synchronously after generation auditing. For high-volume enterprise deployments, offloading deliveries to Celery, ARQ, or BullMQ is recommended.
 
 ---
 
@@ -410,3 +409,14 @@ The service is packaged as a standard container ready for deployment on any cont
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+## Generation and webhook failure handling
+
+Generation audits record the upstream provider outcome independently of optional
+webhook notifications. A webhook dispatch or persistence error is logged and its
+transaction is rolled back; it does not replace a successful generation response
+or mask the original provider exception. Webhook delivery remains synchronous and
+uses the existing retry policy.
+
+Editable installation includes only the `app` package; migration scripts remain
+available in the repository for Alembic commands.

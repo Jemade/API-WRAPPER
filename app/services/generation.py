@@ -49,31 +49,6 @@ class GenerationService:
         try:
             response = await provider_adapter.generate(request, request_id)
 
-            audit_record = GenerationRequest(
-                id=request_id,
-                client_id=client_api_key.id,
-                provider=provider_name,
-                model=request.model,
-                status="success",
-                input_tokens=response.input_tokens,
-                output_tokens=response.output_tokens,
-                total_tokens=response.total_tokens,
-                latency_ms=response.latency_ms,
-            )
-            self.db.add(audit_record)
-            await self.db.commit()
-
-            if request.webhook_url:
-                await self.webhook_service.dispatch(
-                    webhook_url=str(request.webhook_url),
-                    request_id=request_id,
-                    event_type="generation.completed",
-                    payload=response.model_dump(),
-                    db_session=self.db,
-                )
-
-            return response
-
         except Exception as exc:
             status = "failed"
             error_code = "INTERNAL_ERROR"
@@ -96,17 +71,57 @@ class GenerationService:
             self.db.add(audit_record)
             await self.db.commit()
 
-            if request.webhook_url:
-                await self.webhook_service.dispatch(
-                    webhook_url=str(request.webhook_url),
-                    request_id=request_id,
-                    event_type="generation.failed",
-                    payload={
-                        "code": error_code,
-                        "message": error_message,
-                        "request_id": request_id,
-                    },
-                    db_session=self.db,
-                )
+            await self._dispatch_webhook(
+                request,
+                request_id,
+                "generation.failed",
+                {"code": error_code, "message": error_message, "request_id": request_id},
+            )
 
             raise
+
+        audit_record = GenerationRequest(
+            id=request_id,
+            client_id=client_api_key.id,
+            provider=provider_name,
+            model=request.model,
+            status="success",
+            input_tokens=response.input_tokens,
+            output_tokens=response.output_tokens,
+            total_tokens=response.total_tokens,
+            latency_ms=response.latency_ms,
+        )
+        self.db.add(audit_record)
+        await self.db.commit()
+
+        await self._dispatch_webhook(
+            request,
+            request_id,
+            "generation.completed",
+            response.model_dump(),
+        )
+        return response
+
+    async def _dispatch_webhook(
+        self,
+        request: ChatRequest,
+        request_id: str,
+        event_type: str,
+        payload: dict,
+    ) -> None:
+        """Keep optional notification failures separate from the generation outcome."""
+        if not request.webhook_url:
+            return
+        try:
+            await self.webhook_service.dispatch(
+                webhook_url=str(request.webhook_url),
+                request_id=request_id,
+                event_type=event_type,
+                payload=payload,
+                db_session=self.db,
+            )
+        except Exception:
+            await self.db.rollback()
+            logger.exception(
+                "Webhook dispatch failed", request_id=request_id, event_type=event_type
+            )
