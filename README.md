@@ -49,3 +49,7 @@ pytest -q
 ## Current scope
 
 This is a generation gateway, not a transparent implementation of every provider endpoint. Webhook records are persisted, but delivery runs in process rather than through a separate durable outbox worker. The Redis failure policy determines whether traffic is allowed or rejected during a Redis outage.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks, regression tests and review expectations. Use the issue templates for reproducible bugs or concrete feature proposals.
