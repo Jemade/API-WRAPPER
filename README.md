@@ -53,3 +53,9 @@ This is a generation gateway, not a transparent implementation of every provider
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks, regression tests and review expectations. Use the issue templates for reproducible bugs or concrete feature proposals.
+
+## Engineering and contribution guide
+
+Read the [engineering notes](docs/ENGINEERING.md) for implementation boundaries and verification commands, the [review checklist](docs/REVIEW_CHECKLIST.md) for evidence still required, and [CONTRIBUTING.md](CONTRIBUTING.md) to propose changes. Report vulnerabilities through [SECURITY.md](SECURITY.md).
+
+[![Repository hygiene](https://github.com/Jemade/API-WRAPPER/actions/workflows/repository-hygiene.yml/badge.svg)](https://github.com/Jemade/API-WRAPPER/actions/workflows/repository-hygiene.yml)

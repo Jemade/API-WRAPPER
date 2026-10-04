@@ -10,3 +10,13 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Local runtime and private configuration
+venv/
+node_modules/
+.env.local
+.env.*.local
+*.db
+*.sqlite
+*.sqlite3
+.DS_Store
