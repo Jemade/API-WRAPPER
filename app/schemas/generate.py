@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class ChatMessage(BaseModel):
@@ -17,6 +17,13 @@ class ChatMessage(BaseModel):
         min_length=1,
         description="The content of the message.",
     )
+
+    @field_validator("content")
+    @classmethod
+    def reject_blank_content(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Message content must not be blank")
+        return value
 
 
 class ChatRequest(BaseModel):
@@ -54,3 +61,11 @@ class ChatRequest(BaseModel):
         default=None,
         description="Optional webhook URL to receive an HMAC-signed event upon completion.",
     )
+
+    @field_validator("model")
+    @classmethod
+    def normalize_model(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Model identifier must not be blank")
+        return value
