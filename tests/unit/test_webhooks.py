@@ -85,3 +85,24 @@ async def test_webhook_dispatch_retry_on_failure(monkeypatch: pytest.MonkeyPatch
 
     assert success is True
     assert attempts == 2
+
+
+@pytest.mark.asyncio
+async def test_webhook_does_not_retry_permanent_client_error() -> None:
+    attempts = 0
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(400, text="Invalid payload")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        service = WebhookService(http_client=client)
+        delivered = await service.dispatch(
+            webhook_url="https://client.example.com/events",
+            request_id="req_bad_webhook",
+            event_type="generation.completed",
+            payload={"result": "done"},
+        )
+    assert delivered is False
+    assert attempts == 1

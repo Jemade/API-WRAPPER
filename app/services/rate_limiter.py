@@ -1,11 +1,11 @@
 """Redis-backed distributed sliding-window rate limiter."""
 
-import random
 import time
+import uuid
 from dataclasses import dataclass
 
 from redis.asyncio import Redis
-from redis.exceptions import RedisError
+from redis.exceptions import RedisError, WatchError
 
 from app.core.config import get_settings
 from app.core.exceptions import RateLimitExceededError
@@ -61,45 +61,53 @@ class RateLimiter:
         clear_before = now - window_seconds
         redis_key = f"ratelimit:{key_identifier}"
 
+        if limit < 1 or window_seconds < 1:
+            raise ValueError("rate limit and window must be positive")
+
         try:
-            pipe = self.redis.pipeline(transaction=True)
-            pipe.zremrangebyscore(redis_key, "-inf", clear_before)
-            pipe.zcard(redis_key)
-            pipe.zrange(redis_key, 0, 0, withscores=True)
-            results = await pipe.execute()
+            # WATCH makes the quota check and insertion a single optimistic
+            # transaction. Concurrent callers retry instead of oversubscribing.
+            for _ in range(20):
+                async with self.redis.pipeline(transaction=True) as pipe:
+                    try:
+                        await pipe.watch(redis_key)
+                        # Do not mutate the watched key before MULTI.
+                        current_requests = await pipe.zcount(
+                            redis_key, f"({clear_before}", "+inf"
+                        )
+                        entries = await pipe.zrangebyscore(
+                            redis_key, f"({clear_before}", "+inf", start=0, num=1,
+                            withscores=True,
+                        )
+                        reset_epoch = (
+                            int(float(entries[0][1]) + window_seconds + 1)
+                            if entries else int(now + window_seconds)
+                        )
+                        if current_requests >= limit:
+                            await pipe.unwatch()
+                            return RateLimitResult(
+                                allowed=False, limit=limit, remaining=0,
+                                reset_epoch=reset_epoch,
+                            )
 
-            current_requests = int(results[1])
-            oldest_entries = results[2]
-
-            if current_requests < limit:
-                member = f"{now}:{random.randint(10000, 99999)}"
-                add_pipe = self.redis.pipeline(transaction=True)
-                add_pipe.zadd(redis_key, {member: now})
-                add_pipe.expire(redis_key, int(window_seconds) + 1)
-                await add_pipe.execute()
-
-                remaining = limit - current_requests - 1
-                reset_epoch = int(now + window_seconds)
-                return RateLimitResult(
-                    allowed=True,
-                    limit=limit,
-                    remaining=remaining,
-                    reset_epoch=reset_epoch,
-                    degraded=False,
-                )
-            else:
-                reset_epoch = int(now + window_seconds)
-                if oldest_entries and len(oldest_entries) > 0:
-                    oldest_score = float(oldest_entries[0][1])
-                    reset_epoch = int(oldest_score + window_seconds)
-
-                return RateLimitResult(
-                    allowed=False,
-                    limit=limit,
-                    remaining=0,
-                    reset_epoch=reset_epoch,
-                    degraded=False,
-                )
+                        member = uuid.uuid4().hex
+                        pipe.multi()
+                        pipe.zremrangebyscore(redis_key, "-inf", clear_before)
+                        pipe.zadd(redis_key, {member: now})
+                        pipe.expire(redis_key, window_seconds + 1)
+                        await pipe.execute()
+                        return RateLimitResult(
+                            allowed=True, limit=limit,
+                            remaining=limit - current_requests - 1,
+                            reset_epoch=reset_epoch,
+                        )
+                    except WatchError:
+                        # Another request consumed quota while we were checking.
+                        # Refresh the clock before retrying.
+                        now = time.time()
+                        clear_before = now - window_seconds
+                        continue
+            raise RedisError("rate limiter contention retry budget exhausted")
 
         except RedisError as exc:
             logger.error(

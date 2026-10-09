@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import (
     AsyncRetrying,
     RetryCallState,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
@@ -22,6 +22,12 @@ from app.models.webhook import WebhookDelivery
 from app.schemas.webhook import WebhookEvent
 
 logger = get_logger("services.webhook")
+
+
+def _retryable_webhook_error(exc: BaseException) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code == 429 or exc.response.status_code >= 500
+    return isinstance(exc, httpx.RequestError)
 
 
 class WebhookService:
@@ -106,7 +112,7 @@ class WebhookService:
                 reraise=True,
                 stop=stop_after_attempt(max_retries),
                 wait=wait_exponential(multiplier=1.0, min=0.5, max=5),
-                retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
+                retry=retry_if_exception(_retryable_webhook_error),
                 before_sleep=log_retry,
             ):
                 with attempt:
