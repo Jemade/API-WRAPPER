@@ -72,10 +72,13 @@ class RateLimiter:
                     try:
                         await pipe.watch(redis_key)
                         # Do not mutate the watched key before MULTI.
-                        entries = await pipe.zrangebyscore(
-                            redis_key, clear_before, "+inf", withscores=True
+                        current_requests = await pipe.zcount(
+                            redis_key, f"({clear_before}", "+inf"
                         )
-                        current_requests = len(entries)
+                        entries = await pipe.zrangebyscore(
+                            redis_key, f"({clear_before}", "+inf", start=0, num=1,
+                            withscores=True,
+                        )
                         reset_epoch = (
                             int(float(entries[0][1]) + window_seconds + 1)
                             if entries else int(now + window_seconds)
