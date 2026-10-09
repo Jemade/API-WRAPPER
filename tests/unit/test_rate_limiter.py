@@ -119,3 +119,24 @@ async def test_rate_limiter_redis_failure_fail_closed(monkeypatch: pytest.Monkey
     with pytest.raises(RateLimitExceededError) as exc_info:
         await limiter.check_rate_limit("client_broken", limit_override=10)
     assert "fail-closed" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_requests_never_exceed_quota(test_redis: FakeRedis) -> None:
+    """Multiple callers must not consume the same remaining quota slot."""
+    limiter = RateLimiter(redis_client=test_redis)
+    results = await asyncio.gather(
+        *(limiter.check_rate_limit("concurrent-key", limit_override=5) for _ in range(12))
+    )
+    assert sum(result.allowed for result in results) == 5
+    assert sum(not result.allowed for result in results) == 7
+    assert await test_redis.zcard("ratelimit:concurrent-key") == 5
+
+
+@pytest.mark.asyncio
+async def test_invalid_rate_limit_configuration(test_redis: FakeRedis) -> None:
+    limiter = RateLimiter(redis_client=test_redis)
+    with pytest.raises(ValueError, match="positive"):
+        await limiter.check_rate_limit("invalid-limit", limit_override=0)
+    with pytest.raises(ValueError, match="positive"):
+        await limiter.check_rate_limit("invalid-window", window_seconds=0)
